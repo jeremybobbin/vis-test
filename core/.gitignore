@@ -4,6 +4,9 @@
 /map-test
 /array-test
 /ccan-config
+/data
+/hardlink
+/symlink
 *.gcda
 *.gcno
 *.gcov
