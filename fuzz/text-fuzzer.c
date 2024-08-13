@@ -311,6 +311,17 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t len) {
 #else
 
 int main(int argc, char *argv[]) {
+	char *seed;
+	int i = 0;
+	if ((seed = getenv("SEED")) != NULL) {
+		fprintf(stderr, "input seed '%s' hashed to %d\n", seed, i);
+		for (; *seed; seed++) {
+			i = (i<<8)^*seed;
+		}
+		srand(i);
+	} else {
+		srand(getppid());
+	}
 	return repl(argc == 1 ? NULL : argv[1], stdin);
 }
 
