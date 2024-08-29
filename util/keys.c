@@ -9,6 +9,9 @@
 #define ISUTF8(c)   (((c)&0xC0)!=0x80)
 
 static TermKey *termkey;
+static int throttle = 0;
+
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 static void die(const char *errstr, ...) {
         va_list ap;
@@ -27,7 +30,10 @@ static void print(const char *fmt, ...) {
 }
 
 static void delay(void) {
-	usleep(termkey_get_waittime(termkey)*10000);
+	int n = termkey_get_waittime(termkey)*10000 - throttle;
+	if (n > 0) {
+		usleep(n);
+	}
 }
 
 static void printkey(TermKeyKey *key) {
@@ -144,14 +150,32 @@ static void printkey(TermKeyKey *key) {
 int main(int argc, char *argv[]) {
 	char buf[1024];
 	FILE *file = stdin;
+	int i, n;
 	char *term = getenv("TERM");
+		for (i = 1; i < argc; i++) {
+			if (argv[i][0] != '-') {
+				continue;
+			}
+			switch (argv[i][1]) {
+			case 'L': // throttle limit, next arg is limit in bytes per second
+				if (++i > argc)
+					continue;
+				if ((n = atoi(argv[i])) <= 0) {
+					die("throttle must be an integer greater than zero\n", argv[i]);
+				}
+				throttle = 1000000/n;
+			}
+		}
 	if (!term)
 		term = "xterm";
 	if (!(termkey = termkey_new_abstract(term, TERMKEY_FLAG_UTF8)))
 		die("Failed to initialize libtermkey\n");
-	while (fgets(buf, sizeof buf, file)) {
+	for (i = 0; fgets(buf, sizeof buf, file); ) {
 		const char *keys = buf, *next;
-		while (*keys) {
+		for (; *keys; i++) {
+			if (i > 0) {
+				usleep(throttle);
+			}
 			TermKeyKey key = { 0 };
 			if (*keys == '\n') {
 				keys++;
