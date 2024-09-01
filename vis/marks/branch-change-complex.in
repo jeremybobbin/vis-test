@@ -1,0 +1,5 @@
+int main() {
+	if (write(2, str, sizeof(str)-1) < sizeof(str)-1) {
+		return 1;
+	}
+}
