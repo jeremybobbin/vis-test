@@ -1,0 +1,5 @@
+describe("feedkeys", function()
+	it("can handle :qall!<Enter><C-j>", function()
+		vis:feedkeys(":qall!<Enter><C-j>")
+	end)
+end)
