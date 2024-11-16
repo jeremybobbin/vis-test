@@ -1,206 +1,164 @@
+#include <errno.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
-#include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
-#include <termkey.h>
 
-/* is c the start of a utf8 sequence? */
+#include "../../map.h"
+#include "../../ui-terminal-keytab.h"
+#include "../../libkey.h"
+
+#define LENGTH(x)  ((int)(sizeof (x) / sizeof *(x)))
 #define ISUTF8(c)   (((c)&0xC0)!=0x80)
 
-static TermKey *termkey;
-static int throttle = 0;
+Map *keymap = NULL;
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
-static void die(const char *errstr, ...) {
-        va_list ap;
-        va_start(ap, errstr);
-        vfprintf(stderr, errstr, ap);
-        va_end(ap);
-        exit(EXIT_FAILURE);
-}
-
-static void print(const char *fmt, ...) {
-        va_list ap;
-        va_start(ap, fmt);
-        vfprintf(stdout, fmt, ap);
-	fflush(stdout);
-        va_end(ap);
-}
-
-static void delay(void) {
-	int n = termkey_get_waittime(termkey)*10000 - throttle;
-	if (n > 0) {
-		usleep(n);
+static bool map_put_recursive(Map *m, const char *k, const char *v) {
+	char *s;
+	while ((s = map_get(m, v))) {
+		map_delete(m, v);
+		v = s;
 	}
+	return map_put(m, k, v);
 }
 
-static void printkey(TermKeyKey *key) {
-	switch (key->type) {
-	case TERMKEY_TYPE_UNICODE:
-		if (key->modifiers & TERMKEY_KEYMOD_SHIFT)
-			;
-		if (key->modifiers & TERMKEY_KEYMOD_CTRL)
-			key->utf8[0] &= 0x1f;
-		if (key->modifiers & TERMKEY_KEYMOD_ALT)
-			;
-		print("%s", key->utf8);
-		break;
-	case TERMKEY_TYPE_KEYSYM:
-		switch (key->code.sym) {
-		case TERMKEY_SYM_UNKNOWN:
-		case TERMKEY_SYM_NONE:
-			die("Unknown key sym\n");
-		case TERMKEY_SYM_BACKSPACE:
-			print("\b");
-			break;
-		case TERMKEY_SYM_TAB:
-			if (key->modifiers & TERMKEY_KEYMOD_SHIFT)
-				print("\033[Z");
-			else
-				print("\t");
-			break;
-		case TERMKEY_SYM_ENTER:
-			print("\n");
-			break;
-		case TERMKEY_SYM_ESCAPE:
-			print("\033");
-			delay();
-			break;
-		case TERMKEY_SYM_SPACE:
-			print(" ");
-			break;
-		case TERMKEY_SYM_UP:
-			print("\033OA");
-			break;
-		case TERMKEY_SYM_DOWN:
-			print("\033OB");
-			break;
-		case TERMKEY_SYM_RIGHT:
-			print("\033OC");
-			break;
-		case TERMKEY_SYM_LEFT:
-			print("\033OD");
-			break;
-		case TERMKEY_SYM_DEL:
-		case TERMKEY_SYM_BEGIN:
-		case TERMKEY_SYM_FIND:
-		case TERMKEY_SYM_INSERT:
-		case TERMKEY_SYM_DELETE:
-		case TERMKEY_SYM_SELECT:
-		case TERMKEY_SYM_PAGEUP:
-		case TERMKEY_SYM_PAGEDOWN:
-		case TERMKEY_SYM_HOME:
-		case TERMKEY_SYM_END:
-		case TERMKEY_SYM_CANCEL:
-		case TERMKEY_SYM_CLEAR:
-		case TERMKEY_SYM_CLOSE:
-		case TERMKEY_SYM_COMMAND:
-		case TERMKEY_SYM_COPY:
-		case TERMKEY_SYM_EXIT:
-		case TERMKEY_SYM_HELP:
-		case TERMKEY_SYM_MARK:
-		case TERMKEY_SYM_MESSAGE:
-		case TERMKEY_SYM_MOVE:
-		case TERMKEY_SYM_OPEN:
-		case TERMKEY_SYM_OPTIONS:
-		case TERMKEY_SYM_PRINT:
-		case TERMKEY_SYM_REDO:
-		case TERMKEY_SYM_REFERENCE:
-		case TERMKEY_SYM_REFRESH:
-		case TERMKEY_SYM_REPLACE:
-		case TERMKEY_SYM_RESTART:
-		case TERMKEY_SYM_RESUME:
-		case TERMKEY_SYM_SAVE:
-		case TERMKEY_SYM_SUSPEND:
-		case TERMKEY_SYM_UNDO:
-		case TERMKEY_SYM_KP0:
-		case TERMKEY_SYM_KP1:
-		case TERMKEY_SYM_KP2:
-		case TERMKEY_SYM_KP3:
-		case TERMKEY_SYM_KP4:
-		case TERMKEY_SYM_KP5:
-		case TERMKEY_SYM_KP6:
-		case TERMKEY_SYM_KP7:
-		case TERMKEY_SYM_KP8:
-		case TERMKEY_SYM_KP9:
-		case TERMKEY_SYM_KPENTER:
-		case TERMKEY_SYM_KPPLUS:
-		case TERMKEY_SYM_KPMINUS:
-		case TERMKEY_SYM_KPMULT:
-		case TERMKEY_SYM_KPDIV:
-		case TERMKEY_SYM_KPCOMMA:
-		case TERMKEY_SYM_KPPERIOD:
-		case TERMKEY_SYM_KPEQUALS:
-		default:
-			break;
+static int encode(char *buf, size_t len, const char *key) {
+	int i, j;
+	const char *next;
+	char *s;
+
+	next = vis_keys_next(key);
+	if (next == NULL) {
+		return 0;
+	} else if (len == 0) {
+		return -1;
+	}
+
+
+	if (next - key == 1) {
+		buf[0] = key[0];
+		return 1;
+	}
+
+	// key = "<Home>" -> map_get_sized: "Home"
+	if (next - key > 2 && (s = map_get_sized(keymap, &key[1], next-key-2))) {
+		return snprintf(&buf[0], len, "%s", s);
+	}
+
+	if (next - key == 5) { // <C-a>
+		if (strncmp(key, "<C-", 3) == 0) {
+			buf[0] = key[3]-0x60;
+			return 1;
+		} else if (strncmp(key, "<M-", 3) == 0) {
+			if (len < 2) {
+				return 0;
+			}
+			buf[0] = '\x1b';
+			buf[1] = key[3];
 		}
-		break;
-	case TERMKEY_TYPE_FUNCTION:
-	case TERMKEY_TYPE_MOUSE:
-	case TERMKEY_TYPE_POSITION:
-	case TERMKEY_TYPE_MODEREPORT:
-	case TERMKEY_TYPE_UNKNOWN_CSI:
-	default:
-		break;
 	}
+
+	i = 0;
+	if (key[i] != '<' && (key[i] & 0xC0)  && ISUTF8(key[i])) {
+		for (j = 1; !ISUTF8(key[i+j]); j++);
+		memcpy(&buf[0], &key[i], j);
+		return j;
+	}
+
+	return 0;
 }
 
 int main(int argc, char *argv[]) {
-	char buf[1024];
-	FILE *file = stdin;
-	int i, n;
-	char *term = getenv("TERM");
-		for (i = 1; i < argc; i++) {
-			if (argv[i][0] != '-') {
-				continue;
-			}
-			switch (argv[i][1]) {
-			case 'L': // throttle limit, next arg is limit in bytes per second
-				if (++i > argc)
-					continue;
-				if ((n = atoi(argv[i])) <= 0) {
-					die("throttle must be an integer greater than zero\n", argv[i]);
-				}
-				throttle = 1000000/n;
-			}
-		}
-	if (!term)
-		term = "xterm";
-	if (!(termkey = termkey_new_abstract(term, TERMKEY_FLAG_UTF8)))
-		die("Failed to initialize libtermkey\n");
-	for (i = 0; fgets(buf, sizeof buf, file); ) {
-		const char *keys = buf, *next;
-		for (; *keys; i++) {
-			if (i > 0) {
-				usleep(throttle);
-			}
-			TermKeyKey key = { 0 };
-			if (*keys == '\n') {
-				keys++;
-			} else if (*keys == '<' && (next = termkey_strpkey(termkey, keys+1, &key, TERMKEY_FORMAT_VIM)) && *next == '>') {
-				printkey(&key);
-				keys = next+1;
-			} else {
-				const char *start = keys;
-				if (ISUTF8(*keys))
-					keys++;
-				while (!ISUTF8(*keys))
-					keys++;
-				size_t len = keys - start;
-				if (len >= sizeof(key.utf8))
-					die("Too long UTF-8 sequence: %s\n", start);
-				// FIXME: not really correct, bug good enough for now
-				key.type = TERMKEY_TYPE_UNICODE;
-				key.modifiers = 0;
-				if (len > 0)
-					memcpy(key.utf8, start, len);
-				key.utf8[len] = '\0';
-				printkey(&key);
-			}
-		}
+	char kb[VIS_KEY_LENGTH_MAX*2], buf[BUFSIZ];
+	const char *key, *next;
+	int i, j, k, n;
+	struct timespec ts;
+
+	if ((keymap = map_new()) == NULL) {
+		return 1;
 	}
 
+	for (i = 0; i < LENGTH(ui_terminal_keytab); i++) {
+		map_put_recursive(keymap, ui_terminal_keytab[i][2], ui_terminal_keytab[i][1]);
+	}
+
+	for (i = 0; i < LENGTH(ui_terminal_keytab); i++) {
+		if (ui_terminal_keytab[i][1][0] == '^' && ui_terminal_keytab[i][1][1]) {
+			kb[0] = ui_terminal_keytab[i][1][1]^0x40;
+			kb[1] = '\0';
+			key = (const char*) kb;
+		} else {
+			key = ui_terminal_keytab[i][1];
+		}
+		// this may error if there's a bug in infocmp code - we'll just ignore it.
+		map_put_recursive(keymap, key, ui_terminal_keytab[i][1]);
+	}
+
+	map_delete(keymap, "Enter");
+	map_delete(keymap, "Escape");
+	map_delete(keymap, "Tab");
+	if (!(
+		map_put_recursive(keymap, "Enter",  "\n")   &&
+		map_put_recursive(keymap, "Escape", "\x1b") &&
+		map_put_recursive(keymap, "Space",  " ")    &&
+		map_put_recursive(keymap, "Tab",    "\t")
+	)) {
+		return 1;
+	}
+
+	for (i = 0, j = 0;;) {
+		if (i == 0) {
+			if ((n = read(0, &buf[i], sizeof(buf)-i-1)) == 0) {
+				return 0;
+			} else if (n == -1) {
+				fprintf(stderr, "vis-keys - read failed: %s\n", strerror(errno));
+				return 1;
+			} else {
+				buf[n] = '\0';
+				i += n;
+			}
+		} else if (j < i) {
+			if (buf[j] == '\n') {
+				j++;
+				continue;
+			}
+
+			if ((n = encode(&kb[0], sizeof(kb), &buf[j])) == -1) {
+				return 1;
+			}
+
+			if ((n = write(1, kb, n)) == 0) {
+				return 0;
+			} else if (n == -1) {
+				fprintf(stderr, "vis-keys - write failed: %s\n", strerror(errno));
+				return 1;
+			}
+
+			if (strncmp(&buf[j], "<Escape>", sizeof("<Escape>")-1) == 0) {
+				// retry usleep 3 times or quit
+				ts.tv_sec  = 0;
+				ts.tv_nsec = 250000000; // .25 seconds
+				for (k = 0; k < 3; k++) {
+					if (nanosleep(&ts, &ts) == 0) {
+						break;
+					}
+				}
+
+				if (k >= 3) {
+					fprintf(stderr, "vis-keys - sleep failed: %s\n", strerror(errno));
+					return 1;
+				}
+			}
+			if ((next = vis_keys_next(&buf[j]))) {
+				j += next - &buf[j];
+			} else {
+				j = i;
+				continue;
+			}
+		} else {
+			i = 0;
+			j = 0;
+		}
+	}
 	return 0;
 }
