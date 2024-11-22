@@ -1,11 +1,11 @@
 -include ../../config.mk
 
-ALL = buffer-test map-test array-test text-test
+ALL = string-test map-test array-test text-test
 SRC = $(wildcard ccan/*/*.c)
 CFLAGS += -I. -I../.. -DBUFFER_SIZE=4 -DBLOCK_SIZE=4
 
 test: $(ALL)
-	@./buffer-test
+	@./string-test
 	@./map-test
 	@./array-test
 	@./text-test
@@ -18,7 +18,7 @@ text-test: config.h text-test.c ../../text.c ../../text-common.c ../../text-io.c
 	@echo Compiling $@ binary
 	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${filter %.c, $^} ${SRC} ${LDFLAGS} -o $@
 
-buffer-test: config.h buffer-test.c ../../buffer.c
+string-test: config.h string-test.c ../../buffer.c
 	@echo Compiling $@ binary
 	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${filter %.c, $^} ${SRC} ${LDFLAGS} -o $@
 
