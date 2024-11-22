@@ -19,41 +19,41 @@ static enum CmdStatus cmd_insert(Buffer *buf, const char *cmd) {
 	size_t pos;
 	if (sscanf(cmd, "%zu %s\n", &pos, data) != 2)
 		return CMD_ERR;
-	return buffer_insert0(buf, pos, data);
+	return string_insert0(buf, pos, data);
 }
 
 static enum CmdStatus cmd_set(Buffer *buf, const char *cmd) {
 	char data[BUFSIZ];
 	if (sscanf(cmd, "%s\n", data) != 1)
 		return CMD_ERR;
-	return buffer_put0(buf, data);
+	return string_put0(buf, data);
 }
 
 static enum CmdStatus cmd_delete(Buffer *buf, const char *cmd) {
 	size_t pos, len;
 	if (sscanf(cmd, "%zu %zu", &pos, &len) != 2)
 		return CMD_ERR;
-	return buffer_remove(buf, pos, len);
+	return string_remove(buf, pos, len);
 }
 
 static enum CmdStatus cmd_clear(Buffer *buf, const char *cmd) {
-	buffer_clear(buf);
+	string_clear(buf);
 	return CMD_OK;
 }
 
 static enum CmdStatus cmd_size(Buffer *buf, const char *cmd) {
-	printf("%zu bytes\n", buffer_length(buf));
+	printf("%zu bytes\n", string_length(buf));
 	return CMD_OK;
 }
 
 static enum CmdStatus cmd_capacity(Buffer *buf, const char *cmd) {
-	printf("%zu bytes\n", buffer_capacity(buf));
+	printf("%zu bytes\n", string_capacity(buf));
 	return CMD_OK;
 }
 
 static enum CmdStatus cmd_print(Buffer *buf, const char *cmd) {
-	size_t len = buffer_length(buf);
-	const char *data = buffer_content(buf);
+	size_t len = string_length(buf);
+	const char *data = string_content(buf);
 	if (data && fwrite(data, len, 1, stdout) != 1)
 		return CMD_ERR;
 	if (data)
@@ -79,7 +79,7 @@ static Cmd commands[] = {
 int main(int argc, char *argv[]) {
 	char line[BUFSIZ];
 	Buffer buf;
-	buffer_init(&buf);
+	string_init(&buf);
 
 	for (;;) {
 		printf("> ");
@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	buffer_release(&buf);
+	string_release(&buf);
 
 	return 0;
 }
