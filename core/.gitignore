@@ -1,6 +1,6 @@
 /config.h
 /text-test
-/buffer-test
+/string-test
 /map-test
 /array-test
 /ccan-config
