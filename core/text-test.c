@@ -171,7 +171,9 @@ int main(int argc, char *argv[]) {
 
 			ok(txt && !text_save_method(txt, linkname, TEXT_SAVE_ATOMIC), "Text save %s atomic", names[i]);
 			text_free(txt);
+			unlink(linkname);
 		}
+		unlink(filename);
 	}
 
 	txt = text_load(NULL);
