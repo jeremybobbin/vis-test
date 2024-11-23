@@ -32,6 +32,25 @@
 
 #include "tap.h"
 
+#ifndef vasprintf
+int vasprintf(char **s, const char *fmt, va_list ap) {
+	char buf[1024];
+	int n, i;
+	if ((n = vsnprintf(&buf[0], sizeof(buf), fmt, ap)) < 0) {
+		return -1;
+	} else if ((*s = malloc(sizeof(char)*(n+1))) == NULL) {
+		return -1;
+	} else {
+		for (i = 0; i < n; i++) {
+			(*s)[i] = buf[i];
+		}
+		(*s)[n] = '\0';
+	}
+	return n;
+
+}
+#endif
+
 void (*tap_fail_callback)(void) = NULL;
 
 static int no_plan = 0;
