@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include "tap.h"
-#include "map.h"
+#include "../../map.h"
 
 static bool get(Map *map, const char *key, const void *data) {
 	return map_get(map, key) == data && map_closest(map, key) == data;
