@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "tap.h"
-#include "text.h"
-#include "text-util.h"
-#include "util.h"
+#include "../../text.h"
+#include "../../text-util.h"
+#include "../../util.h"
 
 #ifndef BUFSIZ
 #define BUFSIZ 1024
