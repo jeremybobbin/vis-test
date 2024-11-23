@@ -1,34 +1,56 @@
--include ../../config.mk
+include ../../config.mk
+
+.POSIX:
+.SUFFIXES: .o .c .run
 
 ALL = string-test map-test array-test text-test
-SRC = $(wildcard ccan/*/*.c)
-CFLAGS += -I. -I../.. -DBUFFER_SIZE=4 -DBLOCK_SIZE=4
 
-test: $(ALL)
+test: test-string test-map test-array test-text
+
+test-string: string-test
 	@./string-test
+test-map: map-test
 	@./map-test
+test-array: array-test
 	@./array-test
+test-text: text-test
 	@./text-test
 
-config.h:
+.o:
+	${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_ACL} $? -o $@
+
+.c.o:
+	${CC} ${CFLAGS} -I. -DSTRING_SIZE=4 -DBLOCK_SIZE=4 -c $< -o $@
+
+
+ccan-config: ccan-config.c
+
+config.h: ccan-config
 	@echo Generating ccan configuration header
-	@${CC} ccan-config.c -o ccan-config && ./ccan-config "${CC}" ${CFLAGS} > config.h
+	./ccan-config "${CC}" ${CFLAGS} > $@ || rm -f $@
 
-text-test: config.h text-test.c ../../text.c ../../text-common.c ../../text-io.c ../../text-iterator.c ../../text-util.c ../../text-motions.c ../../text-objects.c ../../text-regex.c ../../array.c
-	@echo Compiling $@ binary
-	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${filter %.c, $^} ${SRC} ${LDFLAGS} -o $@
+ccan/tap/tap.o: ccan/tap/tap.h config.h
 
-string-test: config.h string-test.c ../../buffer.c
-	@echo Compiling $@ binary
-	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${filter %.c, $^} ${SRC} ${LDFLAGS} -o $@
+string-test: ../../string.o ccan/tap/tap.o
+string-test.o: config.h
 
-map-test: config.h map-test.c ../../map.c
-	@echo Compiling $@ binary
-	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${filter %.c, $^} ${SRC} ${LDFLAGS} -o $@
+map-test: ../../map.o ccan/tap/tap.o
+map-test.o: config.h
 
-array-test: config.h array-test.c ../../array.c
-	@echo Compiling $@ binary
-	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${filter %.c, $^} ${SRC} ${LDFLAGS} -o $@
+array-test:  ../../array.o ccan/tap/tap.o
+array-test.o: config.h
+
+text-test: ../../array.o ccan/tap/tap.o \
+	../../text.o \
+	../../text-common.o \
+	../../text-io.o \
+	../../text-iterator.o \
+	../../text-motions.o \
+	../../text-objects.o \
+	../../text-regex.o \
+	../../text-util.o
+text-test.o: config.h
+
 
 debug: clean
 	$(MAKE) CFLAGS_EXTRA='${CFLAGS_EXTRA} ${CFLAGS_DEBUG}'
@@ -49,7 +71,7 @@ valgrind: clean ${ALL}
 	@for test in ${ALL}; do \
 		valgrind --leak-check=full --log-file="$$test.valgrind" "./$$test"; \
 		cat "$$test.valgrind"; \
-		grep LEAK "$$test.valgrind" >/dev/null && exit 1 || true; \
+		if grep -q LEAK "$$test.valgrind" then exit 1; fi; \
 	done
 
 tis: clean
@@ -57,7 +79,8 @@ tis: clean
 
 clean:
 	@echo cleaning
-	@rm -f ccan-config config.h
+	@rm -f configuratortest.c configurator.out ccan-config
+	@rm -f ccan/tap/tap.o *.o
 	@rm -f data symlink hardlink
 	@rm -f $(ALL)
 	@rm -f *.gcov *.gcda *.gcno
