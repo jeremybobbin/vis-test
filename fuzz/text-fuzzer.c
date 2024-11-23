@@ -80,7 +80,7 @@ static enum CmdStatus bench_replace(Text *txt, size_t pos, const char *cmd) {
 
 static enum CmdStatus bench_mark(Text *txt, size_t pos, const char *cmd) {
 	Mark mark = text_mark_set(txt, pos);
-	if (mark == EMARK)
+	if (IS_EMARK(mark))
 		return CMD_FAIL;
 	if (text_mark_get(txt, mark) != pos)
 		return CMD_FAIL;
@@ -192,9 +192,9 @@ static enum CmdStatus cmd_mark_set(Text *txt, const char *cmd) {
 	if (sscanf(cmd, "%zu\n", &pos) != 1)
 		return CMD_ERR;
 	Mark m = text_mark_set(txt, pos);
-	if (m != EMARK)
+	if (IS_EMARK(m))
 		mark = m;
-	return m != EMARK;
+	return IS_EMARK(m);
 }
 
 static enum CmdStatus cmd_mark_get(Text *txt, const char *cmd) {
