@@ -11,3 +11,5 @@
 *.gcno
 *.gcov
 *.valgrind
+**.o
+*.a
