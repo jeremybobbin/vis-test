@@ -4,18 +4,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include "tap.h"
-#include "buffer.h"
+#include "../../string.h"
 
-static bool compare(Buffer *buf, const char *data, size_t len) {
+static bool compare(String *buf, const char *data, size_t len) {
 	return buf->len == len && (len == 0 || memcmp(buf->data, data, buf->len) == 0);
 }
 
-static bool compare0(Buffer *buf, const char *data) {
+static bool compare0(String *buf, const char *data) {
 	return buf->len == strlen(data)+1 && memcmp(buf->data, data, buf->len) == 0;
 }
 
 int main(int argc, char *argv[]) {
-	Buffer buf;
+	String buf;
 
 	plan_no_plan();
 
