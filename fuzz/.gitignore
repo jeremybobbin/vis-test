@@ -2,3 +2,4 @@
 /text-fuzzer
 /text-libfuzzer
 /string-fuzzer
+*.o

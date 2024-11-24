@@ -1,24 +1,24 @@
 -include ../../config.mk
 
-ALL = text-fuzzer text-libfuzzer string-fuzzer
-CC = afl-gcc
-CFLAGS += -I. -DBUFFER_SIZE=4 -DBLOCK_SIZE=4
+ALL = text-fuzzer string-fuzzer
+CC = afl-clang-fast
 
-TEXT_SRC = ../../text.c ../../text-common.c ../../text-io.c ../../text-iterator.c ../../text-util.c ../../text-motions.c ../../text-objects.c ../../text-regex.c ../../array.c
+TEXT_OBJ = ../../text.o ../../text-common.o ../../text-io.o ../../text-iterator.o ../../text-util.o ../../text-motions.o ../../text-objects.o ../../text-regex.o ../../array.o
+
+.o:
+	${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_ACL} $? -o $@
+
+.c.o:
+	${CC} ${CFLAGS} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} -I. -DSTRING_SIZE=4 -DBLOCK_SIZE=4 -c $< -o $@
+
 
 test: $(ALL)
 
-text-fuzzer: text-fuzzer.c fuzzer.h $(TEXT_SRC)
-	@echo Compiling $@ binary
-	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${filter %.c, $^} ${LDFLAGS} -o $@
+text-fuzzer: $(TEXT_OBJ)
+text-fuzzer.o: text-fuzzer.c fuzzer.h
 
-text-libfuzzer: text-fuzzer.c fuzzer.h $(TEXT_SRC)
-	@echo Compiling $@ binary
-	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} -DLIBFUZZER ${filter %.c, $^} -fsanitize=fuzzer,address,undefined ${LDFLAGS} -o $@
-
-string-fuzzer: string-fuzzer.c fuzzer.h ../../string.c
-	@echo Compiling $@ binary
-	@${CC} ${CFLAGS} ${CFLAGS_STD} ${CFLAGS_LIBC} ${CFLAGS_EXTRA} ${filter %.c, $^} ${LDFLAGS} -o $@
+string-fuzzer: ../../string.o
+string-fuzzer.o: string-fuzzer.c fuzzer.h
 
 debug: clean
 	$(MAKE) CFLAGS_EXTRA='${CFLAGS_EXTRA} ${CFLAGS_DEBUG}'
@@ -39,7 +39,7 @@ afl-fuzz-string: string-fuzzer
 
 clean:
 	@echo cleaning
-	@rm -f $(ALL)
+	@rm -f $(ALL) *.o
 
 distclean: clean
 	@rm -rf results/
