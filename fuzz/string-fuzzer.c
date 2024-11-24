@@ -5,16 +5,16 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "fuzzer.h"
-#include "buffer.h"
-#include "util.h"
+#include "../../string.h"
+#include "../../util.h"
 
 #ifndef BUFSIZ
 #define BUFSIZ 1024
 #endif
 
-typedef enum CmdStatus (*Cmd)(Buffer *buf, const char *cmd);
+typedef enum CmdStatus (*Cmd)(String *buf, const char *cmd);
 
-static enum CmdStatus cmd_insert(Buffer *buf, const char *cmd) {
+static enum CmdStatus cmd_insert(String *buf, const char *cmd) {
 	char data[BUFSIZ];
 	size_t pos;
 	if (sscanf(cmd, "%zu %s\n", &pos, data) != 2)
@@ -22,36 +22,36 @@ static enum CmdStatus cmd_insert(Buffer *buf, const char *cmd) {
 	return string_insert0(buf, pos, data);
 }
 
-static enum CmdStatus cmd_set(Buffer *buf, const char *cmd) {
+static enum CmdStatus cmd_set(String *buf, const char *cmd) {
 	char data[BUFSIZ];
 	if (sscanf(cmd, "%s\n", data) != 1)
 		return CMD_ERR;
 	return string_put0(buf, data);
 }
 
-static enum CmdStatus cmd_delete(Buffer *buf, const char *cmd) {
+static enum CmdStatus cmd_delete(String *buf, const char *cmd) {
 	size_t pos, len;
 	if (sscanf(cmd, "%zu %zu", &pos, &len) != 2)
 		return CMD_ERR;
 	return string_remove(buf, pos, len);
 }
 
-static enum CmdStatus cmd_clear(Buffer *buf, const char *cmd) {
+static enum CmdStatus cmd_clear(String *buf, const char *cmd) {
 	string_clear(buf);
 	return CMD_OK;
 }
 
-static enum CmdStatus cmd_size(Buffer *buf, const char *cmd) {
+static enum CmdStatus cmd_size(String *buf, const char *cmd) {
 	printf("%zu bytes\n", string_length(buf));
 	return CMD_OK;
 }
 
-static enum CmdStatus cmd_capacity(Buffer *buf, const char *cmd) {
+static enum CmdStatus cmd_capacity(String *buf, const char *cmd) {
 	printf("%zu bytes\n", string_capacity(buf));
 	return CMD_OK;
 }
 
-static enum CmdStatus cmd_print(Buffer *buf, const char *cmd) {
+static enum CmdStatus cmd_print(String *buf, const char *cmd) {
 	size_t len = string_length(buf);
 	const char *data = string_content(buf);
 	if (data && fwrite(data, len, 1, stdout) != 1)
@@ -61,7 +61,7 @@ static enum CmdStatus cmd_print(Buffer *buf, const char *cmd) {
 	return CMD_OK;
 }
 
-static enum CmdStatus cmd_quit(Buffer *buf, const char *cmd) {
+static enum CmdStatus cmd_quit(String *buf, const char *cmd) {
 	return CMD_QUIT;
 }
 
@@ -78,7 +78,7 @@ static Cmd commands[] = {
 
 int main(int argc, char *argv[]) {
 	char line[BUFSIZ];
-	Buffer buf;
+	String buf;
 	string_init(&buf);
 
 	for (;;) {

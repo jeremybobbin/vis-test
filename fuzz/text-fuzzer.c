@@ -7,9 +7,9 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include "fuzzer.h"
-#include "text.h"
-#include "text-util.h"
-#include "util.h"
+#include "../../text.h"
+#include "../../text-util.h"
+#include "../../util.h"
 
 #ifndef BUFSIZ
 #define BUFSIZ 1024
