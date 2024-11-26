@@ -98,8 +98,18 @@ function describe(s, fn)
 	end
 end
 
+function on_next(event, fn)
+	local t = {}
+	t.handler = function(...)
+		vis.events.unsubscribe(vis.events.WIN_OPEN, t.handler)
+		fn(...)
+	end
+	vis.events.subscribe(vis.events.WIN_OPEN, t.handler)
+end
 
-vis.events.subscribe(vis.events.WIN_OPEN, function(win)
+on_next(vis.events.WIN_OPEN, function(win)
+	-- unsubscribe so that we don't get a recursive call when openning windows in a test
+
 	-- test.in file passed to vis
 	local in_file = win.file.name
 	if not in_file then
@@ -107,9 +117,9 @@ vis.events.subscribe(vis.events.WIN_OPEN, function(win)
 	end
 
 	-- use the corresponding test.lua file
-	lua_file = string.gsub(in_file, '%.in$', '.lua')
+	local test = string.gsub(in_file, '%.in$', '.lua')
 
-	local ok, err = pcall(dofile, lua_file)
+	local ok, err = pcall(dofile, test)
 	if not ok then
 		print(tostring(err))
 		vis:exit(2) -- ERROR
