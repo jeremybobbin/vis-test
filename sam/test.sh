@@ -7,18 +7,23 @@ export LANG="en_US.UTF-8"
 
 export VIS_PATH=.
 [ -z "$VIS" ] && VIS="../../vis"
-[ -z "$SAM" ] && SAM="sam"
 [ -z "$PLAN9" ] && PLAN9="/usr/local/plan9/bin"
 
-for SAM in "$SAM" "$PLAN9/sam" /usr/lib/plan9/bin/sam 9; do
-	if type "$SAM" >/dev/null 2>&1; then
-		break
-	fi
-done
+if [ -z "$SAM" ] || ! command -v "$SAM" >/dev/null 2>&1; then
+	for path in sam "$PLAN9/sam" /opt/plan9/bin/sam /usr/lib/plan9/bin/sam 9; do
+		if command -v "$path" >/dev/null 2>&1; then
+			SAM="$path"
+			break
+		fi
+	done
+fi
 
-[ "$SAM" = "9" ] && SAM="9 sam"
+if [ "$SAM" = "9" ]; then
+	SAM="9 sam"
+fi
 
 echo "$SAM"
+"$SAM" -h # for lack of version
 $VIS -v
 
 if ! $VIS -v | grep '+lua' >/dev/null 2>&1; then
@@ -41,7 +46,7 @@ for t in $TESTS; do
 	REF="$t.ref"
 	rm -f "$SAM_OUT" "$SAM_ERR" "$VIS_OUT" "$VIS_ERR"
 
-	type "$SAM" >/dev/null 2>&1 && {
+	command -v "$SAM" >/dev/null 2>&1 && {
 		printf "Running test %s with sam ... " "$t"
 		{
 			echo ',{'
