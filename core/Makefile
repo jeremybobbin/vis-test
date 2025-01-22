@@ -17,7 +17,7 @@ test-text: text-test
 	@./text-test
 
 .c.o:
-	${CC} ${CFLAGS} -I. -DSTRING_SIZE=4 -DBLOCK_SIZE=4 -c $< -o $@
+	${CC} ${CFLAGS} ${CFLAGS_STD} -I. -DSTRING_SIZE=4 -DBLOCK_SIZE=4 -c $< -o $@
 
 .o.a:
 	${AR} ${ARFLAGS} $@ $?
