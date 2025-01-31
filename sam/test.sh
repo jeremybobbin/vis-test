@@ -5,7 +5,6 @@ NL='
 
 export LANG="en_US.UTF-8"
 
-export VIS_PATH=.
 [ -z "$VIS" ] && VIS="../../vis"
 [ -z "$PLAN9" ] && PLAN9="/usr/local/plan9/bin"
 

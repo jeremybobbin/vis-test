@@ -1,6 +1,5 @@
 #!/bin/sh
 
-export VIS_PATH=.
 [ -z "$VIS" ] && VIS="../../vis"
 $VIS -v
 
@@ -15,7 +14,7 @@ TESTS_RUN=0
 if [ $# -gt 0 ]; then
 	test_files=$*
 else
-	test_files="$(find . -type f -name '*.lua' -a ! -name visrc.lua)"
+	test_files="$(find . -type f -name '*.lua' -a ! -name rc.lua)"
 fi
 
 for t in $test_files; do

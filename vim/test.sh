@@ -1,6 +1,5 @@
 #!/bin/sh
 export LANG="en_US.UTF-8"
-export VIS_PATH=.
 export EDITORS
 
 [ -z "$VIS" ] && VIS="../../vis"

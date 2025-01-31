@@ -1,5 +1,6 @@
-package.path = '../../lua/?.lua;'..package.path
-dofile("../../lua/vis.lua")
+require("vis")
+require("vis/digraph")
+require("vis/textobject-lexer")
 
 local function run_if_exists(luafile)
 	local f = io.open(luafile, "r")
