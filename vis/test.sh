@@ -1,5 +1,6 @@
 #!/bin/sh
 
+export VIS_TESTING=.
 export VIS_PATH=.
 export PATH="$PWD/../..:$PATH"
 export LANG="en_US.UTF-8"
@@ -15,7 +16,7 @@ fi
 
 if [ $# -eq 1 ]; then
 	rm -f "$1.out"
-	if ! $VIS '+qall' "$1.in" < /dev/null 2>&3 || ! [ -e "$1.out" ]; then
+	if ! timeout -s KILL 3s $VIS '+qall' "$1.in" < /dev/null 2>&3 || ! [ -e "$1.out" ]; then
 	        echo "$1 ERROR"
 	        if [ -n "$DEBUG" ]; then
 			exit 2

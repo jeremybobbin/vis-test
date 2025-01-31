@@ -1,6 +1,7 @@
-package.path = '../../lua/?.lua;'..package.path
-dofile("../../lua/vis.lua")
+--package.path = '../../lua/?.lua;'..package.path
+--dofile("../../lua/vis.lua")
 
+require("vis")
 local function run_if_exists(luafile)
 	local f = io.open(luafile, "r")
 	if f ~= nil then

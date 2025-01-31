@@ -1,6 +1,4 @@
-package.path = '../../lua/?.lua;'..package.path
-
-dofile("../../lua/vis.lua")
+require("vis")
 
 local function str(e)
 	if type(e) == "string" then
