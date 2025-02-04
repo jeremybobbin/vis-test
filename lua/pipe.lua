@@ -1,5 +1,10 @@
 describe("vis:pipe(\"yes 2>/dev/null | head -n 5 | tr -d '\n'\")", function()
-	status, out, err = vis:pipe("yes 2>/dev/null | head -n 5 | tr -d '\n'")
+	local file = vis.win.file
+	local range = {
+		start=0,
+		finish=0,
+	}
+	status, out, err = vis:pipe(file, range, "yes 2>/dev/null | head -n 5 | tr -d '\n'", 2)
 	it("gives 5 Y's", function()
 		assert.are.equals("yyyyy", out)
 	end)
@@ -10,7 +15,12 @@ describe("vis:pipe(\"yes 2>/dev/null | head -n 5 | tr -d '\n'\")", function()
 end)
 
 describe("vis:pipe(\"exit 69\")", function()
-	status, out, err = vis:pipe("exit 69")
+	local file = vis.win.file
+	local range = {
+		start=0,
+		finish=0,
+	}
+	status, out, err = vis:pipe(file, range, "exit 69")
 	it("exits with code 69", function()
 		assert.are.equal(69, status)
 	end)
